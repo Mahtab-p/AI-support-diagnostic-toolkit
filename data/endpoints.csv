@@ -1,0 +1,5 @@
+name,method,url
+Product 1,GET,https://dummyjson.com/products/1
+Product 2,GET,https://dummyjson.com/products/2
+Missing Product,GET,https://dummyjson.com/products/999999
+Invalid Host,GET,https://this-domain-should-not-exist-example.invalid
