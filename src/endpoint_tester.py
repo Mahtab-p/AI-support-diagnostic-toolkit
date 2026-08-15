@@ -287,9 +287,7 @@ def generate_summary(results):
         # --------------------------------------------------
         if api_result["success"]:
 
-            status = api_result[
-                "status_code"
-            ]
+            status = api_result["status_code"]
 
             # Successful HTTP response
             if 200 <= status < 300:
@@ -320,18 +318,218 @@ def generate_summary(results):
         "successful": successful,
         "client_errors": client_errors,
         "server_errors": server_errors,
-        "request_errors": request_errors,
+        "connection_errors": connection_errors,
         "high_severity": high_severity
     }
 
 
 # --------------------------------------------------
-# Print summary statistics
+# Count overall endpoint test results
+# --------------------------------------------------
+def generate_summary(results):
+
+    # Total number of endpoint results
+    total = len(results)
+
+    # Create counters
+    successful = 0
+    client_errors = 0
+    server_errors = 0
+    connection_errors = 0
+    high_severity = 0
+
+    # Check every endpoint result
+    for item in results:
+
+        api_result = item["api_result"]
+        diagnosis = item["diagnosis"]
+
+        # ------------------------------------------
+        # We received an HTTP response
+        # ------------------------------------------
+        if api_result["success"]:
+
+            status = api_result["status_code"]
+
+            # 2xx
+            if 200 <= status < 300:
+                successful += 1
+
+            # 4xx
+            elif 400 <= status < 500:
+                client_errors += 1
+
+            # 5xx
+            elif 500 <= status < 600:
+                server_errors += 1
+
+        # ------------------------------------------
+        # Request failed before usable HTTP response
+        # ------------------------------------------
+        else:
+            connection_errors += 1
+
+        # Count high-severity incidents
+        if diagnosis["severity"] == "High":
+            high_severity += 1
+
+    # Return all summary information
+    return {
+        "total": total,
+        "successful": successful,
+        "client_errors": client_errors,
+        "server_errors": server_errors,
+        "connection_errors": connection_errors,
+        "high_severity": high_severity
+    }
+# --------------------------------------------------
+# Print complete diagnostic and resolution results
+# --------------------------------------------------
+def print_results(results):
+
+    print("\n" + "=" * 60)
+    print("MULTI-ENDPOINT API DIAGNOSTIC RESULTS")
+    print("=" * 60)
+
+    for item in results:
+
+        api_result = item["api_result"]
+        diagnosis = item["diagnosis"]
+        resolution = item["resolution"]
+
+        print("\n" + "-" * 60)
+
+        # ------------------------------------------
+        # Basic endpoint information
+        # ------------------------------------------
+        print(
+            f"Service: "
+            f"{api_result.get('name', 'Unknown')}"
+        )
+
+        print(
+            f"Method: "
+            f"{api_result.get('method', 'Unknown')}"
+        )
+
+        print(
+            f"URL: "
+            f"{api_result.get('url', 'N/A')}"
+        )
+
+        # ------------------------------------------
+        # HTTP response
+        # ------------------------------------------
+        if api_result["success"]:
+
+            print(
+                f"HTTP Status Code: "
+                f"{api_result['status_code']}"
+            )
+
+            print(
+                f"Response Time: "
+                f"{api_result['response_time']:.2f}s"
+            )
+
+        # ------------------------------------------
+        # Request/network failure
+        # ------------------------------------------
+        else:
+
+            print(
+                f"Error Code: "
+                f"{api_result['error_type']}"
+            )
+
+            print(
+                f"Error Message: "
+                f"{api_result['message']}"
+            )
+
+        # ------------------------------------------
+        # Diagnosis
+        # ------------------------------------------
+        print(
+            f"Diagnosis: "
+            f"{diagnosis['diagnosis']}"
+        )
+
+        print(
+            f"Category: "
+            f"{diagnosis['category']}"
+        )
+
+        print(
+            f"Severity: "
+            f"{diagnosis['severity']}"
+        )
+
+        # ------------------------------------------
+        # Likely causes
+        # ------------------------------------------
+        print("\nLikely Causes:")
+
+        for cause in resolution[
+            "likely_causes"
+        ]:
+
+            print(
+                f"- {cause}"
+            )
+
+        # ------------------------------------------
+        # Recommended troubleshooting actions
+        # ------------------------------------------
+        print("\nRecommended Actions:")
+
+        for number, action in enumerate(
+            resolution["recommended_actions"],
+            start=1
+        ):
+
+            print(
+                f"{number}. {action}"
+            )
+
+        # ------------------------------------------
+        # Escalation
+        # ------------------------------------------
+        if resolution["escalation_required"]:
+            escalation = "YES"
+
+        else:
+            escalation = "NO"
+
+        print(
+            f"\nEscalation Required: "
+            f"{escalation}"
+        )
+
+        guidance = resolution.get(
+            "escalation_guidance",
+            resolution.get(
+                "escalation_reason",
+                "Not provided"
+            )
+        )
+
+        print(
+            f"Escalation Guidance: "
+            f"{guidance}"
+        )
+
+    print("\n" + "=" * 60)
+
+
+# --------------------------------------------------
+# Print the overall endpoint testing summary
 # --------------------------------------------------
 def print_summary(summary):
 
-    print("\nSUMMARY")
-    print("-" * 60)
+    print("\n" + "=" * 60)
+    print("TEST SUMMARY")
+    print("=" * 60)
 
     print(
         f"Total Endpoints: "
@@ -354,8 +552,8 @@ def print_summary(summary):
     )
 
     print(
-        f"Request Errors: "
-        f"{summary['request_errors']}"
+        f"Connection Errors: "
+        f"{summary['connection_errors']}"
     )
 
     print(
@@ -363,31 +561,25 @@ def print_summary(summary):
         f"{summary['high_severity']}"
     )
 
-    print("-" * 60)
+    print("=" * 60)
 
 
-# --------------------------------------------------
-# Run the multi-endpoint test only when this file
-# is executed directly
-# --------------------------------------------------
+
+
+
+
 if __name__ == "__main__":
 
-    # Test every endpoint defined in endpoints.csv
     results = test_all_endpoints(
         "data/endpoints.csv"
     )
 
-    # Print individual endpoint results
-    print_results(
-        results
-    )
+    print_results(results)
 
-    # Generate summary counters
     summary = generate_summary(
         results
     )
 
-    # Print the final summary
-    print_summary(
-        summary
-    )
+    print_summary(summary)
+
+
